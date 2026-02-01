@@ -1,0 +1,12 @@
+{
+  "llmProvider": "anthropic",
+  "outputDirectory": "~/Documents/DailyBriefs",
+  "createAppleNote": false,
+  "timezone": "America/New_York",
+  "slackWebhookUrl": null,
+  "apiPort": 3000,
+  "apiKey": null,
+  "cloudStorageType": null,
+  "githubToken": null,
+  "gistId": null
+}
