@@ -24,6 +24,20 @@ export class GitHubGistStorage implements CloudStorage {
     const content = JSON.stringify(data, null, 2);
     const filename = 'note-operator-data.json';
 
+    // Validate JSON before saving
+    try {
+      JSON.parse(content);
+    } catch (error: any) {
+      throw new Error(`Invalid JSON data: ${error.message}`);
+    }
+
+    // Check size (GitHub Gist limit is ~1MB per file)
+    const sizeInBytes = Buffer.byteLength(content, 'utf8');
+    const sizeInMB = sizeInBytes / (1024 * 1024);
+    if (sizeInMB > 0.9) {
+      console.warn(`Warning: Gist content is large (${sizeInMB.toFixed(2)}MB). Consider reducing note content.`);
+    }
+
     try {
       if (this.gistId) {
         // Update existing Gist
@@ -81,7 +95,36 @@ export class GitHubGistStorage implements CloudStorage {
         return null;
       }
 
-      return JSON.parse(file.content) as StoredNotesData;
+      // Validate and parse JSON
+      let parsedData: StoredNotesData;
+      try {
+        const content = file.content;
+        const contentLength = content?.length || 0;
+        
+        // Check if content appears truncated (common issue with large Gists)
+        if (contentLength > 0 && !content.trim().endsWith('}')) {
+          console.warn(`Warning: Gist content may be truncated. Last 100 chars: ${content.substring(Math.max(0, contentLength - 100))}`);
+        }
+        
+        parsedData = JSON.parse(content) as StoredNotesData;
+      } catch (parseError: any) {
+        const contentLength = file.content?.length || 0;
+        const errorPosition = parseError.message.match(/position (\d+)/)?.[1] || 'unknown';
+        const errorPosNum = parseInt(errorPosition, 10);
+        
+        console.error(`JSON parse error at position ${errorPosition} of ${contentLength} characters`);
+        console.error(`Content around error (chars ${Math.max(0, errorPosNum - 200)} to ${Math.min(contentLength, errorPosNum + 200)}):`);
+        console.error(file.content.substring(Math.max(0, errorPosNum - 200), Math.min(contentLength, errorPosNum + 200)));
+        
+        // Check if it's a truncation issue
+        if (errorPosNum > contentLength - 100) {
+          throw new Error(`Gist content appears to be truncated. JSON parse failed near end of file (position ${errorPosition} of ${contentLength}). The Gist may be too large or the content was cut off during save.`);
+        }
+        
+        throw new Error(`Failed to parse Gist JSON: ${parseError.message}. Content length: ${contentLength} chars, error at position: ${errorPosition}`);
+      }
+
+      return parsedData;
     } catch (error: any) {
       if (error.status === 404) {
         console.log('Gist not found, starting fresh');
