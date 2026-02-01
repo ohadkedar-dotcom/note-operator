@@ -5,6 +5,7 @@
 
 import { AnthropicClient } from '../llm/anthropic-client.js';
 import { SlackWriter } from '../output/slack-writer.js';
+import { FileWriter } from '../output/file-writer.js';
 import { StoredNotesData } from '../api/types.js';
 import { Note } from '../applescript/notes-extractor.js';
 import { NoteProcessor } from '../processor/note-processor.js';
@@ -99,6 +100,11 @@ async function main() {
     console.log('Generating brief with LLM...');
     const brief = await llmService.generateBrief(aggregatedContent);
     console.log(`Generated brief with ${brief.actionItems.length} action items`);
+
+    // Save brief to file for artifact upload
+    const fileWriter = new FileWriter('./briefs');
+    const briefFilePath = await fileWriter.writeDailyBrief(brief);
+    console.log(`Brief saved to: ${briefFilePath}`);
 
     // Post to Slack (optional)
     const slackWebhookUrl = process.env.SLACK_WEBHOOK_URL;
