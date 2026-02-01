@@ -51,24 +51,11 @@ async function main() {
 
     console.log(`Processing ${notes.length} notes from storage`);
 
-    // Reconstruct snapshot store from stored data
-    // Create a custom snapshot store that uses the stored snapshots
-    const storedSnapshots = storedData.snapshots;
-    const snapshotStore = new class extends NoteSnapshotStore {
-      async getSnapshots() {
-        if (Object.keys(storedSnapshots).length === 0) {
-          return null;
-        }
-        return {
-          lastRun: storedData.lastRun || storedData.timestamp,
-          notes: storedSnapshots,
-        };
-      }
-    }();
-
-    if (Object.keys(storedSnapshots).length > 0) {
-      console.log(`Found ${Object.keys(storedSnapshots).length} note snapshots for diff comparison`);
-    }
+    // For GitHub Actions, we don't have previous snapshots stored (to save space)
+    // We'll process notes without diff comparison - this means we'll get full note content
+    // which is fine since we're only processing notes from the last 24 hours anyway
+    const snapshotStore = new NoteSnapshotStore();
+    console.log('Processing notes without snapshot diff (snapshots not stored in Gist to save space)');
 
     // Create a temporary timestamp store that uses the stored cutoff date
     const cutoffDate = new Date(storedData.cutoffDate);

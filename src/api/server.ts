@@ -56,20 +56,8 @@ export class ApiServer {
         const processed = await processor.processNotes(allNotes);
         console.log(`API: Processed ${processed.notes.length} notes from last 24 hours`);
 
-        // Step 3: Get snapshots for storage
-        const snapshots = await this.config.noteSnapshotStore.getSnapshots();
-        const snapshotMap: { [noteName: string]: { name: string; body: string; modificationDate: string } } = {};
-        if (snapshots) {
-          Object.entries(snapshots.notes).forEach(([name, snapshot]) => {
-            snapshotMap[name] = {
-              name: snapshot.name,
-              body: snapshot.body,
-              modificationDate: snapshot.modificationDate,
-            };
-          });
-        }
-
-        // Step 4: Prepare data for storage
+        // Step 3: Prepare data for storage
+        // Only store filtered notes (not all snapshots) to keep Gist size manageable
         // Convert Date objects to ISO strings for JSON serialization
         const notesForStorage = processed.notes.map(note => ({
           name: note.name,
@@ -80,7 +68,7 @@ export class ApiServer {
         const lastRun = await this.config.timestampStore.getLastRun();
         const storedData: StoredNotesData = {
           notes: notesForStorage as any, // Note: modificationDate is now string in storage
-          snapshots: snapshotMap,
+          snapshots: {}, // Don't store all snapshots - they're too large. Only store filtered notes.
           timestamp: new Date().toISOString(),
           cutoffDate: processed.cutoffDate.toISOString(),
           lastRun: lastRun ? lastRun.toISOString() : null,
