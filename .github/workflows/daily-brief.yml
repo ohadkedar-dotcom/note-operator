@@ -40,3 +40,17 @@ jobs:
           GIST_ID: ${{ secrets.GIST_ID }}
         continue-on-error: false
 
+      - name: List generated files
+        run: |
+          echo "Checking for generated brief files..."
+          ls -la briefs/ || echo "briefs directory does not exist"
+          find . -name "Daily_Summary_*.md" -type f || echo "No markdown files found"
+
+      - name: Upload daily brief as artifact
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: daily-brief
+          path: briefs/*.md
+          retention-days: 30
+          if-no-files-found: warn
