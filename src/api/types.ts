@@ -12,7 +12,8 @@ export interface ExtractNotesResponse {
 }
 
 export interface StoredNotesData {
-  notes: Note[];
+  notes: Note[]; // Individual notes (for detailed processing if needed)
+  aggregatedContent?: string; // Pre-aggregated content for LLM (optimized storage)
   snapshots: { [noteName: string]: { name: string; body: string; modificationDate: string } };
   timestamp: string;
   cutoffDate: string;

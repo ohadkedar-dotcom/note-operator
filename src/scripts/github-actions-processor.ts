@@ -42,40 +42,49 @@ async function main() {
       process.exit(1);
     }
 
-    // Convert stored notes back to Note objects (with Date objects)
-    const notes: Note[] = storedData.notes.map(note => ({
-      name: note.name,
-      body: note.body,
-      modificationDate: new Date(note.modificationDate),
-    }));
-
-    console.log(`Processing ${notes.length} notes from storage`);
-
-    // For GitHub Actions, we don't have previous snapshots stored (to save space)
-    // We'll process notes without diff comparison - this means we'll get full note content
-    // which is fine since we're only processing notes from the last 24 hours anyway
-    const snapshotStore = new NoteSnapshotStore();
-    console.log('Processing notes without snapshot diff (snapshots not stored in Gist to save space)');
-
-    // Create a temporary timestamp store that uses the stored cutoff date
-    const cutoffDate = new Date(storedData.cutoffDate);
-    const timestampStore = new class extends TimestampStore {
-      async getCutoffDate(): Promise<Date> {
-        return cutoffDate;
+    // Use pre-aggregated content if available (optimized storage)
+    // Otherwise, process notes individually (fallback)
+    let aggregatedContent: string;
+    
+    if (storedData.aggregatedContent) {
+      // Use pre-aggregated content (much smaller Gist size)
+      console.log(`Using pre-aggregated content from storage (${storedData.aggregatedContent.length} characters)`);
+      aggregatedContent = storedData.aggregatedContent;
+      
+      if (aggregatedContent.trim().length === 0) {
+        console.log('No content to process. Skipping LLM call.');
+        process.exit(0);
       }
-    }();
+    } else {
+      // Fallback: process notes individually (if aggregatedContent not available)
+      console.log(`Processing ${storedData.notes.length} notes individually (fallback mode)`);
+      const notes: Note[] = storedData.notes.map(note => ({
+        name: note.name,
+        body: note.body,
+        modificationDate: new Date(note.modificationDate),
+      }));
 
-    // Process notes
-    const processor = new NoteProcessor(timestampStore, snapshotStore);
-    const processed = await processor.processNotes(notes);
+      const snapshotStore = new NoteSnapshotStore();
+      const cutoffDate = new Date(storedData.cutoffDate);
+      const timestampStore = new class extends TimestampStore {
+        async getCutoffDate(): Promise<Date> {
+          return cutoffDate;
+        }
+      }();
 
-    if (processed.notes.length === 0) {
-      console.log('No notes to process. Skipping LLM call.');
-      process.exit(0);
+      const processor = new NoteProcessor(timestampStore, snapshotStore);
+      const processed = await processor.processNotes(notes);
+
+      if (processed.notes.length === 0) {
+        console.log('No notes to process. Skipping LLM call.');
+        process.exit(0);
+      }
+
+      aggregatedContent = processed.aggregatedContent;
     }
 
-    console.log(`\n=== Processing ${processed.notes.length} notes ===`);
-    console.log(`Aggregated content length: ${processed.aggregatedContent.length} characters`);
+    console.log(`\n=== Processing content ===`);
+    console.log(`Aggregated content length: ${aggregatedContent.length} characters`);
 
     // Generate brief using LLM
     const anthropicApiKey = process.env.ANTHROPIC_API_KEY;
@@ -85,7 +94,7 @@ async function main() {
 
     const llmService = new AnthropicClient(anthropicApiKey);
     console.log('Generating brief with LLM...');
-    const brief = await llmService.generateBrief(processed.aggregatedContent);
+    const brief = await llmService.generateBrief(aggregatedContent);
     console.log(`Generated brief with ${brief.actionItems.length} action items`);
 
     // Post to Slack

@@ -66,9 +66,12 @@ export class ApiServer {
         }));
 
         const lastRun = await this.config.timestampStore.getLastRun();
+        // Store only aggregated content to minimize Gist size
+        // Individual notes are not needed for GitHub Actions workflow
         const storedData: StoredNotesData = {
-          notes: notesForStorage as any, // Note: modificationDate is now string in storage
-          snapshots: {}, // Don't store all snapshots - they're too large. Only store filtered notes.
+          notes: [], // Don't store individual notes - too large. Only store aggregated content.
+          aggregatedContent: processed.aggregatedContent, // Store pre-aggregated content for GitHub Actions
+          snapshots: {}, // Don't store all snapshots - they're too large.
           timestamp: new Date().toISOString(),
           cutoffDate: processed.cutoffDate.toISOString(),
           lastRun: lastRun ? lastRun.toISOString() : null,

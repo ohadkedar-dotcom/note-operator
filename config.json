@@ -6,7 +6,7 @@
   "slackWebhookUrl": null,
   "apiPort": 3000,
   "apiKey": null,
-  "cloudStorageType": null,
+  "cloudStorageType": "gist",
   "githubToken": null,
   "gistId": null
 }

@@ -140,6 +140,25 @@ export class GitHubGistStorage implements CloudStorage {
   getGistId(): string | null {
     return this.gistId;
   }
+
+  /**
+   * Delete the current Gist (useful for cleaning up corrupted Gists)
+   */
+  async deleteGist(): Promise<void> {
+    if (!this.gistId) {
+      throw new Error('No Gist ID to delete');
+    }
+
+    try {
+      await this.octokit.rest.gists.delete({
+        gist_id: this.gistId,
+      });
+      console.log(`Deleted Gist ${this.gistId}`);
+      this.gistId = null;
+    } catch (error: any) {
+      throw new Error(`Failed to delete Gist: ${error.message}`);
+    }
+  }
 }
 
 export class GitHubRepoStorage implements CloudStorage {
