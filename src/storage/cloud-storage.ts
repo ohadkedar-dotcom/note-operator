@@ -47,6 +47,9 @@ export class GitHubGistStorage implements CloudStorage {
             },
           },
         });
+        if (!response.data.id) {
+          throw new Error('Failed to create Gist: No ID returned');
+        }
         this.gistId = response.data.id;
         console.log(`Created new Gist ${this.gistId} with notes data`);
         console.log(`Save this Gist ID to your config: ${this.gistId}`);
@@ -68,6 +71,10 @@ export class GitHubGistStorage implements CloudStorage {
       const response = await this.octokit.rest.gists.get({
         gist_id: this.gistId,
       });
+
+      if (!response.data.files) {
+        return null;
+      }
 
       const file = response.data.files['note-operator-data.json'];
       if (!file || !file.content) {
