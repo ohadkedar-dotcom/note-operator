@@ -1,0 +1,42 @@
+name: Daily Brief Generation
+
+on:
+  schedule:
+    # Run daily at 6:00 PM Eastern Time (18:00)
+    # Cron format: minute hour day month day-of-week
+    # UTC time: 6 PM ET = 11 PM UTC (23:00) or 10 PM UTC (22:00) depending on DST
+    # Using 23:00 UTC (covers both EST and EDT)
+    - cron: '0 23 * * *'
+  workflow_dispatch: # Allow manual triggering
+
+jobs:
+  generate-brief:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build project
+        run: npm run build
+
+      - name: Process notes and generate brief
+        id: generate-brief
+        run: |
+          node dist/scripts/github-actions-processor.js
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GIST_ID: ${{ secrets.GIST_ID }}
+        continue-on-error: false
+
