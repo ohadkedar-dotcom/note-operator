@@ -8,6 +8,13 @@ export class SlackWriter {
       throw new Error('Slack webhook URL is required');
     }
     this.webhookUrl = webhookUrl.trim();
+    
+    // Validate URL format
+    try {
+      new URL(this.webhookUrl);
+    } catch (error: any) {
+      throw new Error(`Invalid Slack webhook URL format: ${error.message}`);
+    }
   }
 
   /**

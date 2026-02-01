@@ -55,6 +55,9 @@ async function main() {
         console.log('No content to process. Skipping LLM call.');
         process.exit(0);
       }
+      
+      // Log a preview of the content for debugging
+      console.log(`Content preview (first 500 chars): ${aggregatedContent.substring(0, 500)}`);
     } else {
       // Fallback: process notes individually (if aggregatedContent not available)
       console.log(`Processing ${storedData.notes.length} notes individually (fallback mode)`);
@@ -97,15 +100,22 @@ async function main() {
     const brief = await llmService.generateBrief(aggregatedContent);
     console.log(`Generated brief with ${brief.actionItems.length} action items`);
 
-    // Post to Slack
+    // Post to Slack (optional)
     const slackWebhookUrl = process.env.SLACK_WEBHOOK_URL;
-    if (slackWebhookUrl) {
+    if (slackWebhookUrl && slackWebhookUrl.trim() !== '' && slackWebhookUrl !== 'null') {
       console.log('Posting to Slack...');
-      const slackWriter = new SlackWriter(slackWebhookUrl);
-      await slackWriter.postDailyBrief(brief);
-      console.log('Posted to Slack successfully');
+      try {
+        const slackWriter = new SlackWriter(slackWebhookUrl);
+        await slackWriter.postDailyBrief(brief);
+        console.log('Posted to Slack successfully');
+      } catch (error: any) {
+        console.error(`Failed to post to Slack: ${error.message}`);
+        console.log('Continuing without Slack post...');
+        // Don't fail the workflow if Slack posting fails
+      }
     } else {
-      console.log('SLACK_WEBHOOK_URL not set, skipping Slack post');
+      console.log('SLACK_WEBHOOK_URL not configured, skipping Slack post');
+      console.log('(You can add SLACK_WEBHOOK_URL secret later to enable Slack notifications)');
     }
 
     // Update storage with new timestamp
