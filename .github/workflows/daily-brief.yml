@@ -1,12 +1,9 @@
 name: Daily Brief Generation
 
 on:
-  schedule:
-    # Run daily at 6:00 PM Israel Time (GMT+2)
-    # Cron format: minute hour day month day-of-week
-    # UTC time: 6 PM Israel (GMT+2) = 4 PM UTC (16:00) during standard time
-    # During daylight saving (GMT+3), this will run at 7 PM Israel time
-    - cron: '0 16 * * *'
+  # Schedule disabled – run manually via Actions → Run workflow
+  # schedule:
+  #   - cron: '0 23 * * *'
   workflow_dispatch: # Allow manual triggering
 
 jobs:
